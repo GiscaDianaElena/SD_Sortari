@@ -6,8 +6,6 @@
 
 using namespace std;
 
-// (b1 b2 b3 b4) << 4 => b1 b2 b3 b4 0 0 0 0 + (b5 b6 b7 b8) => b1 b2 b3 b4 b5 b6 b7 b8
-
 vector <long long>& generareRandom(long long n, long long nmax) {
     vector <long long> *vect = new vector <long long>(n);
     vector <long long> &v = *vect;
