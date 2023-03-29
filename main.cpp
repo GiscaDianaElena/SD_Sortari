@@ -1,220 +1,179 @@
 #include <iostream>
-#include <cstdlib>
-#include <chrono>
-#include <ctime>
-#include <algorithm>
+#include <fstream>
 #include <vector>
+#include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
-vector <unsigned long long> aux;
+// (b1 b2 b3 b4) << 4 => b1 b2 b3 b4 0 0 0 0 + (b5 b6 b7 b8) => b1 b2 b3 b4 b5 b6 b7 b8
 
-// merge() este folosită pentru a combina doi sub-vectori sortați într-un singur vector sortat.
-void merge( vector <unsigned long long> &v, int stanga, int dreapta)
-{
-    aux.resize(dreapta - stanga + 1);
-    int mijloc = (stanga + dreapta) / 2, k = 0;
-    int i = stanga, j = mijloc + 1;
-    while(i <= mijloc && j <= dreapta)
-      if(v[i] <= v[j])
+vector <long long>& generareRandom(long long n, long long nmax) {
+    vector <long long> *vect = new vector <long long>(n);
+    vector <long long> &v = *vect;
+    srand(time(NULL)); // random seed
+    for (long long i = 0; i < n; ++i) {
+        v[i] = rand();
+        v[i] = v[i] << 32; // v[i] <<= 32;
+        v[i] = v[i] + rand(); // v[i] += rand();
+        v[i] = v[i] % (nmax + 1); // v[i] %= nmax + 1;
+    }
+    return v;
+}
+
+void afisare(vector <long long> &v) {
+    long long n = v.size();
+    for (long long i = 0; i < n; ++i) {
+        cout << v[i] << " ";
+    }
+}
+
+bool sortat(vector <long long> &v) {
+    long long n = v.size();
+    for (long long i = 1; i < n; ++i) {
+        if (v[i] < v[i - 1]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// frecv[i] = de cate ori apare i in vectorul v
+void countingSort(vector <long long> &v, long long nmax) {
+    long long n = v.size();
+    vector <long long> frecv(nmax + 1);
+    for (long long i = 0; i < n; ++i) {
+        ++frecv[v[i]];
+    }
+    long long k = 0;
+    for (long long i = 0; i <= nmax; ++i) {
+        for (long long j = 0; j < frecv[i]; ++j) {
+            v[k++] = i;
+        }
+    }
+}
+
+void interclasare(vector <long long> &v, long long st, long long dr) {
+    vector <long long> aux(dr - st + 1);
+    long long mij = (st + dr) / 2, k = 0, i = st, j = mij + 1;
+    while (i <= mij && j <= dr) {
+        if (v[i] <= v[j]) {
+            aux[k++] = v[i++];
+        } else {
+            aux[k++] = v[j++];
+        }
+    }
+    while (i <= mij) {
         aux[k++] = v[i++];
-      else
-        aux[k++] = v[j++]
-    while(i <= mijloc)
-      aux[k++] = v[i++];
-    while( j <= dreapta )
-      aux[k++] = v[j++];
-    for(int i = stanga; i <= dr; i++)
-      v[i] = aux[i - stanga];
+    }
+    while (j <= dr) {
+        aux[k++] = v[j++];
+    }
+    for (long long i = st; i <= dr; ++i) {
+        v[i] = aux[i - st];
+    }
 }
 
-// mergeSort() este funcția principală care sortează vectorul
-void mergeSort( vector <unsigned long long> &v, int stanga, int dreapta)
-{
-    if(stanga >= dreapta)
-      return;
-    int mijloc = (stanga + dreapta) / 2;
-    mergeSort(v, stanga, mijloc);
-    mergeSort(v, mijloc + 1, dreapta);
-    mergeSort(v, stanga, dreapta);
+void mergeSort(vector <long long> &v, long long st, long long dr) {
+    if (st >= dr) {
+        return;
+    }
+    long long mij = (st + dr) / 2;
+    mergeSort(v, st, mij);
+    mergeSort(v, mij + 1, dr);
+    interclasare(v, st, dr);
 }
 
-void shellSort(vector <unsigned long long> &v)
-{
-    int n = v.size(), pas = 0;
-    for(int i = n/2; i > 0; i /= 2)
-        for(int j = i; j < n; j++)
-            if(v[j] < v[j - i])
-            {
-                swap(v[j], v[j - i]);
-                if(j - i >= i)
-                {
-                    pas += i;
-                    j -= i + 1;
-                }
-                else if(pas)
-                {
-                    j += pas;
-                    pas = 0;
-                }
+void insertionSort(vector <long long> &v, long long st, long long dr) {
+    for (long long i = st + 1; i <= dr; ++i) {
+        for (long long j = i; j > st && v[j] < v[j - 1]; --j) {
+            swap(v[j], v[j - 1]);
+        }
+    }
+}
+
+void timSort(vector <long long> &v, long long st, long long dr) {
+    if (dr - st < 32) {
+        insertionSort(v, st, dr);
+        return;
+    }
+    long long mij = (st + dr) / 2;
+    timSort(v, st, mij);
+    timSort(v, mij + 1, dr);
+    interclasare(v, st, dr);
+}
+
+void shellSort(vector <long long> &v) {
+    long long n = v.size();
+    for (long long gap = n / 2; gap > 0; gap /= 2) {
+        for (long long i = gap; i < n; ++i) {
+            for (long long j = i; j >= gap && v[j - gap] > v[j]; j -= gap) {
+                swap(v[j - gap], v[j]);
             }
+        }
+    }
 }
 
-void afisare(vector <unsigned long long> v)
-{
-    int n = v.size();
-    for(int i = 0; i < n; i++)
-        cout<<v[i]<<" ";
-    cout<<endl;
-}
-
-bool sortat(vector <unsigned long long> v)
-{
-    int n = v.size();
-    bool ok = true;
-    for(int i = 1; i < n && ok; i++)
-        if(v[i-1] > v[i])
-            ok = false;
-    return ok;
-}
-
-void radixSort(vector <unsigned long long> &v, int baza, unsigned long long putere)
+void radixSort( vector <unsigned long long> &v, int baza, unsigned long long putere )
 {
     vector <unsigned long long> cifre[baza];
     int n = v.size();
-    for(int i = 0; i < n; i++)
-        cifre[v[i] % putere / (putere / baza)].push_back(v[i]);
+    for( int i = 0; i < n; ++i )
+        cifre[ v[i] % putere / ( putere / baza ) ].push_back( v[i] );
     int k = 0;
-    for(int i = 0; i < baza; i++)
+    for( int i = 0; i < baza; ++i )
     {
         int m = cifre[i].size();
-        for(int j = 0; j < m; j++)
+        for( int j = 0; j < m; ++j )
             v[k++] = cifre[i][j];
     }
-    if(!sortat(v))
-        radixSort(v, baza, putere * baza);
+    if( !sortat(v) )
+        radixSort( v, baza, putere * baza );
 }
 
-void countingSort( vector <unsigned long long> &v, unsigned long long nmax )
-{
-    int n = v.size();
-    aux.resize( nmax + 1 );
-    for( int i = 0; i < n; ++i )
-        ++aux[ v[i] ];
-    int k = 0;
-    for( int i = 0; i <= nmax; ++i )
-        for( int j = 0; j < aux[i]; ++j )
-            v[k++] = i;
-}
-
-void timSort( vector <unsigned long long> &v, int st, int dr )
-{
-    if( dr - st < 32 )
-    {
-        insertionSort( v, st, dr );
-        return;
-    }
-    int mij = ( st + dr ) / 2;
-    timSort( v, st, mij );
-    timSort( v, mij + 1, dr );
-    merge( v, st, dr );
-}
-
-int main()
-{
-    ifstream f("date.in");
-    ofstream g("date.out");
-    int teste;
+int main() {
+    long long n, nmax, teste;
+    ifstream f("input.txt");
     f >> teste;
-    for( int t = 0; t < teste; ++t )
-    {
-        unsigned long long n, nmax;
+    for (long long t = 0; t < teste; ++t) {
         f >> n >> nmax;
-        // generare test
-        vector < unsigned long long > v, cop;
-        v.resize( n );
-        srand( time( 0 ) );
-        for( int i = 0; i < n; ++i )
-        {
-            v[i] = rand();
-            v[i] = v[i] << 32;
-            v[i] += rand();
-            v[i] %= nmax + 1;
-        }
+        cout << "---------- Testul " << t + 1 << " ----------" << endl;
 
-        //testare sortari
-        g << "Testul " << t + 1 << ":\nn = " << n << ", nmax = " << nmax << endl << endl;
+        vector <long long> v = generareRandom(n, nmax), cop = v;
 
-        g << "TimSort: " << endl;
-        cop = v;
-        auto start = chrono::steady_clock::now();
-        timSort( cop, 0, n - 1 );
-        auto stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
-        aux.clear();
+        auto t1 = clock();
+        countingSort(v, nmax);
+        auto t2 = clock();
+        cout << "Counting Sort: " << (float)(t2 - t1) / CLOCKS_PER_SEC << endl; // timpul in secunde
 
-        g << "MergeSort: " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        mergeSort( cop, 0, n - 1 );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
-        aux.clear();
+        v = cop;
+        t1 = clock();
+        timSort(v, 0, n - 1);
+        t2 = clock();
+        cout << "Tim Sort: " << (float)(t2 - t1) / CLOCKS_PER_SEC << endl; // timpul in secunde
 
-        g << "ShellSort: " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        shellSort( cop );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
+        v = cop;
+        t1 = clock();
+        mergeSort(v, 0, n - 1);
+        t2 = clock();
+        cout << "Merge Sort: " << (float)(t2 - t1) / CLOCKS_PER_SEC << endl; // timpul in secunde
 
-        g << "RadixSort (Baza 2): " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        radixSort( cop, 2, 2 );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
+        v = cop;
+        t1 = clock();
+        shellSort(v);
+        t2 = clock();
+        cout << "Shell Sort: " << (float)(t2 - t1) / CLOCKS_PER_SEC << endl; // timpul in secunde
 
-        g << "RadixSort (Baza 10): " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        radixSort( cop, 10, 10 );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
+        v = cop;
+        t1 = clock();
+        radixSort(v, 2, 2);
+        t2 = clock();
+        cout << "Radix Sort: " << (float)(t2 - t1) / CLOCKS_PER_SEC << endl; // timpul in secunde
 
-        g << "RadixSort (Baza 16): " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        radixSort( cop, 16, 16 );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
-
-        g << "RadixSort (Baza 2^16): " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        radixSort( cop, 1 << 16, 1 << 16 );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
-
-        g << "CountingSort: " << endl;
-        cop = v;
-        start = chrono::steady_clock::now();
-        countingSort( cop, nmax );
-        stop = chrono::steady_clock::now();
-        g << chrono::duration_cast<chrono::milliseconds>(stop - start).count() / 1000.0 << 's' << endl;
-        g << sortat( cop ) << endl << endl;
-        aux.clear();
-
-        g << "-------------------------------------------" << endl << endl;
+        cout << endl;
     }
+
+
     f.close();
-    g.close();
     return 0;
 }
